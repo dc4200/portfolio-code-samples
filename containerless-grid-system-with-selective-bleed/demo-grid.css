@@ -1,0 +1,623 @@
+/*
+```md
+# Containerless Grid System with Subgrid
+
+This system utilizes a global 14 track grid where the outer two tracks act as responsive gutters. By default rows are subgrids, meaning they automatically align their internal content to the 12 central tracks.
+
+## Spanning & Bleeds
+
+Bleeds allow content or backgrounds to "break out" of the 12 column center and touch the viewport edges.
+
+Default Behavior: Content starts and ends at the "content container" boundaries.
+.start-edge: Start from the absolute viewport edge.
+.end-edge: End at the absolute viewport edge.
+.end-content: Explicitly end at the content boundary.
+.content-lock: Use this class to decouple the background bleed from the content spanning (e.g., a full-width background with centered text).
+
+## Common Utility Combos
+
+Full Bleed: start-edge end-edge
+Right Bleed: start-content end-edge
+Left Bleed: start-edge end-content
+No Bleed (Centered):start-content end-content
+
+## Grid Types & Opt-Outs
+
+While the 12 column subgrid is the default, you can opt into different grid behaviors using specific attributes:
+
+### Standard Subgrid (Default)
+12 columns is a popular multiple that's ideal for 1x12, 2x6, 3x4, and 4x3 layouts.
+```html
+<div class="start-content end-content">
+  <div>Content spans 12 columns by default</div>
+</div>
+```
+
+### Independent Grid (.custom-grid-cols)
+Breaks the subgrid link to create a custom coordinate system. Use the --content-col-count variable to define your tracks (eg a 16 column grid).
+```html
+<div class="start-content end-content" data-section data-custom-grid-cols>
+  <div class="custom-grid-cols" style="--content-col-count: 16;" data-grid>
+    <div style="--col-width: 8;"><h2>Custom Span 8 of 16 cols</h2></div>
+    <div style="--col-width: 8;"><h2>Custom Span 8 of 16 cols</h2></div>
+  </div>
+</div>
+```
+
+### Nested Grid
+.nested-grid: Both the row and its children participates in the subgrid.
+
+### Hybrid Nested Subgrid
+.nested-subgrid: Row participates in the subgrid, but its children act as an independent grid.
+
+## Grid Defintion
+The grid is defined by utility classes. Presentational styling has been separated out by the use of data attributes and can be safely ignored
+
+## Grid settings via: css constants & variables
+CSS constants, defined with @property, are found in the "Grid content settings: CSS Constants" secton
+CSS variables are found below @layer layout > .grid
+*/
+
+@layer base, layout, components, demo, utilities;
+
+/* 
+Grid content settings: CSS Constants
+these definitions must come after any @charset, @layer statements (but not blocks), and @import at-rules to avoid breaking the css 
+*/
+@property --content-col-count {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 12;
+}
+@property --content-col-marker {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 2;
+}
+@property --child-grid-origin {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
+/* minimal resets */
+@layer base {
+  html {
+    box-sizing: border-box;
+  }
+  *, 
+  *::before, 
+  *::after {
+    box-sizing: inherit;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  /* media */
+  img,
+  picture,
+  video, 
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* forms */
+  input,
+  button,
+  textarea, 
+  select {
+    font: inherit;
+  }
+
+  /* lists */
+  ul[role='list'], ol[role='list'] {
+    list-style: none;
+    padding: 0;
+  }
+
+  /* .img-copy */
+  .img-copy {
+    gap: 0;
+  }
+  .img-copy > img { 
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+}
+
+@layer layout {
+  /* Parent grid */
+  .grid {
+    /* Grid content settings: CSS Variables */
+    --content-area-width: 110rem; /* Should ideally live with the constants but @property doesn't like rem units */
+    --content-col-start: var(--content-col-marker);
+    --content-col-end: calc(var(--content-col-marker) * -1);
+    --content-col-width: calc(var(--content-area-width) / var(--content-col-count));
+    --gutter-width: 0.5rem;
+    --component-pad: 2rem;
+    /* CSS constants, defined with @property, found in the "Grid content settings: CSS Constants" section */
+    /*
+    --content-col-count
+    Defines the number of columns for the grid.
+    Should be defined only once for the entire main grid. 
+    */
+    /* 
+    --content-col-marker
+    Defines the content boundaries. 
+    Should be defined only once for the entire main grid. 
+    */
+    /* 
+    --child-grid-origin
+    Holds the constant value 1 to mark the start line of the child grid.
+    Should not be changed.
+    */
+
+    display: grid;
+    column-gap: 0.5rem;
+    grid-template-columns: 
+      minmax(var(--gutter-width), 1fr) 
+      /* 1rem  */
+      repeat(
+        var(--content-col-count),
+        minmax(0, var(--content-col-width)))
+      /* 1rem  */
+      minmax(var(--gutter-width), 1fr);
+
+    @media (min-width: 768px) {
+      --gutter-width: 1rem;
+      column-gap: 1rem;
+    }
+  }
+
+  /* Child grid */
+  .grid > * {
+    display: grid;
+    grid-template-columns: 
+      minmax(var(--gutter-width), 1fr)
+      /* 1rem */
+      repeat(
+        var(--content-col-count), 
+        minmax(0, var(--content-col-width))) 
+      /* 1rem  */
+      minmax(var(--gutter-width), 1fr); /* legacy browser fallback */
+    grid-template-columns: subgrid;
+    grid-column: var(--content-col-start) / var(--content-col-end);
+
+    /* vertical row spacing */
+    padding-block: 1.5rem;
+
+    @media(min-width: 768px) {
+      padding-block: 1.75rem;
+    }
+    @media(min-width: 1024px) {
+      padding-block: 2.25rem;
+    }
+    @media(min-width: 1280px) {
+      padding-block: 2.75rem;
+    }
+    @media(min-width: 1536px) {
+      padding-block: 3.25rem;
+    }
+    @media(min-width: 1760px) {
+      padding-block: 3.75rem;
+    }
+  }
+
+  /* Grandchildren (Child grid columns) */
+  /* Mobile-first */
+  .grid > * > :not(.custom-grid-cols > *) { 
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .pad-inline {
+    padding-inline: var(--component-pad);
+  }
+
+  /* Bleeds */
+  .start-content.end-edge { /* right-bleed parent */
+  }
+  .start-content.end-edge > * { /* right-bleed child */
+  }
+  .start-edge.end-content { /* left-bleed */
+  }
+  .start-edge.end-edge { /* full-bleed */
+  }
+  .start-content.end-content { /* no-bleed parent */
+  }
+  .start-content.end-content > * { /* no-bleed child */
+  }
+  .start-content.end-edge.content-lock { /* right-bleed-with-content-lock parent */
+  }
+  .start-content.end-edge.content-lock > * { /* right-bleed-with-content-lock child */
+  }
+  .start-edge.end-content.content-lock { /* left-bleed-with-content-lock parent */
+  }
+  .start-edge.end-content.content-lock > * { /* left-bleed-with-content-lock child */
+  }
+  .start-edge.end-edge.content-lock { /* full-bleed-with-content-lock parent */
+  }
+  .start-edge.end-edge.content-lock > * { /* full-bleed-with-content-lock child */
+  }
+
+  /* content-lock */
+  .grid > .content-lock > * {
+    grid-column-start: calc((var(--content-col-marker) + var(--child-grid-origin)) - var(--content-col-start, 2)) !important;
+    grid-column-end: span var(--content-col-count, 12) !important;
+  }
+
+  /* Mobile breakpoint */
+  @media (max-width: 799px) {
+    .nested-subgrid > * {
+      grid-column: 1 / -1 !important;
+    }
+    .nested-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* Desktop breakpoint */
+  @media (min-width: 800px) {
+    .grid > :not(:has(.custom-grid-cols)) > * {
+      grid-column-start: auto;
+      grid-column-end: span var(--col-width, var(--content-col-count));
+    }
+
+    .grid > :not(:has(.custom-grid-cols)):not(.content-lock):not(.one-column):not(.start-content) > *:first-child {
+      grid-column-start: 1 !important; 
+    }
+
+    .two-columns > *:nth-child(2n + 3),
+    .three-columns > *:nth-child(3n + 4),
+    .four-columns > *:nth-child(4n + 5) {
+      grid-column-start: 1 !important;
+    }
+
+    .three-columns > *:nth-child(3n + 4) {
+      grid-column-start: 1;
+    }
+
+    .four-columns > *:nth-child(4n + 5) {
+      grid-column-start: 1;
+    }
+
+    .grid > :not(:has(.custom-grid-cols)) > *:last-child {
+      grid-column-end: span var(--content-col-end);
+    }
+
+    .grid > :not(:has(.custom-grid-cols)) > *:only-child {
+      grid-column: 1 / -1;
+    }  
+
+    .two-columns :nth-child(odd) {
+      grid-column: var(--content-col-start, 2) / span var(--col-width);
+    }
+
+    .three-columns :nth-child(4) {
+      grid-column: var(--content-col-start, 2) / span var(--col-width);
+    }
+
+    .three-columns > *:last-child {
+      grid-column: span var(--col-width);
+    }
+
+    .four-columns {
+      --col-width: calc(var(--content-col-count) / 4);
+    }
+
+    .four-columns :nth-child(5) {
+      grid-column: var(--content-col-start, 2) / span var(--col-width);
+    }
+
+    .four-columns > *:last-child {
+      grid-column: span var(--col-width);
+    }
+
+    .cards {
+      grid-template-rows: repeat(3, auto) 1fr;
+    }
+
+    .card > * {
+      grid-column: 1 / -1;
+      margin-left: 0;
+      --content-col-start: 1;
+    }
+
+    .cards .card:nth-child(4) {
+      grid-column-start: var(--content-col-start, 2);
+      grid-column-end: span var(--col-width);
+    }
+
+    .custom-grid-cols {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(var(--content-col-count), 1fr);
+      gap: 1rem;
+    }
+
+    .custom-grid-cols > * {
+      grid-column: span var(--col-width) !important; 
+    }    
+  }
+}
+
+@layer components {
+  .cards {
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* legacy browser fallback */
+    grid-template-rows: auto auto auto 1fr; /* legacy browser fallback */
+    grid-template-columns: subgrid;
+    grid-template-rows: subgrid;
+    grid-row: span 4;
+  }
+
+  .card-title,
+  .card-subtitle,
+  .card-body {
+    padding-inline: 1rem;
+  }
+
+  .card-image {
+    grid-row: 1;
+    max-width: 100%;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    grid-column: 1 / -1;
+  }
+
+  .card-title {
+    grid-row: 2;
+    margin: 1rem 0 0;
+    grid-column: 1 / -1;
+  }
+
+  .card-subtitle {
+    grid-row: 3;
+    margin: 0;
+    opacity: 0.7;
+    grid-column: 1 / -1;
+  }
+
+  .card-body {
+    grid-row: 4;
+    margin: 0;
+    grid-column: 1 / -1;
+  }
+
+  /* Demo page specific hero styling */
+
+  @media (min-width: 650px) {
+    /* Desktop breakpoint */
+
+    .hero {
+      padding: 3em 0;
+    }
+
+    .hero-title {
+      grid-row: 1 / 2;
+      grid-column: 1 / 7;
+      z-index: 2;
+    }
+
+    .hero-img {
+      grid-row: 1 / span 2;
+      grid-column: 5 / -3;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      max-height: 60vh;
+    }
+
+    .start-edge {
+      .hero-img {
+        grid-column: 5 / var(--content-col-end, -1);
+      }
+
+      .hero-title {
+        grid-column: 1 / 6;
+      }
+    }
+  }
+}
+
+/* Demo presentational styles (Can be safely ignored) */
+@layer demo {
+  [data-presentation] {
+
+    font-family: sans-serif;
+    line-height: 1.8;
+    font-size: 1.125rem;
+
+    .card {
+      background: #fff;
+      text-align: left;
+      border: 1px solid #000;
+      gap: 0.5rem;
+      padding: 0 0 2rem;
+    }
+
+    .main-title {
+      font-size: clamp(3.5rem, 7vw + 1rem, 5rem);
+      text-transform: uppercase;
+      line-height: 0.9;
+      margin-bottom: 0.2em;
+    }
+
+    h2 {
+      font-size: 2rem;
+      line-height: 0.9;
+      text-transform: uppercase;
+    }
+
+    .hero {
+      padding-bottom: 3em;
+    }
+
+    [data-section] {
+      padding: 3rem 0;
+      text-align: center;
+    }
+
+    .center {
+      grid-column: 1 / -1;
+      align-self: center;
+      text-align: center;
+      @media(min-width: 800px) {
+        grid-column: span var(--col-width);
+        column-gap: 2rem;
+      }
+    }
+
+    .one-column {
+      background: #222;
+      padding: 3em 0;
+      text-align: center;
+      color: #f4f4f4;    
+    }
+
+    .four-columns {
+      background-color: honeydew;
+    }
+
+    .one-third {
+      background-color: lightgoldenrodyellow;
+    }
+
+    .two-thirds {
+      background-color: palegoldenrod;
+    }
+
+    .one-fourth {
+      background-color: darkolivegreen;
+      color: white;
+    }
+
+    .three-fourths {
+      background-color: darkseagreen;
+    }
+
+    [data-nested-subgrid] {
+      background: #f0f0f0;
+      padding: 2rem 0;
+      margin-bottom: 2rem;
+    }
+
+    [data-nested-subgrid] [data-grid] {
+      grid-column: 1 / -1; 
+      display: grid; 
+      grid-template-columns: subgrid; 
+      background: rgba(0,0,0,0.05);
+    }
+
+    [data-nested-subgrid] [data-grid-cell] {
+      grid-column: span 6; 
+      background: lightgoldenrodyellow; 
+      padding: 1rem;
+    }
+
+    [data-nested-grid] {
+      background: #fff;
+      padding: 2rem 0; 
+      margin-bottom: 2rem;
+    }
+
+    [data-nested-grid] [data-grid] {
+      grid-column: 1 / -1; 
+      display: grid; 
+      grid-template-columns: repeat(3, 1fr); 
+      gap: 10px; 
+      background: #f0f0f0; 
+      padding-block: 2rem;
+    }
+
+    [data-nested-grid] [data-grid-cell] {
+      background: palegoldenrod; 
+      color: #000; 
+      padding: 1rem;
+    }
+
+    [data-right-bleed],
+    [data-right-bleed-content-lock] {
+      background-color: khaki;
+    }
+
+    [data-left-bleed],
+    [data-left-bleed-content-lock] {
+      background-color: powderblue;
+    }
+
+    [data-full-bleed],
+    [data-full-bleed-content-lock],
+    [data-custom-grid-cols] {
+      background-color: wheat;
+    }
+
+    [data-no-bleed] {
+      background-color: gainsboro;
+    }
+  }
+}
+
+@layer utilities {  
+  .start-edge {
+    --content-col-start: 1;
+  }
+
+  .end-content { 
+    --content-col-end: -2; 
+  }
+
+  .end-edge { 
+    --content-col-end: -1; 
+  }
+
+  .one-column { 
+    --col-width: calc(var(--content-col-count) / 1);
+  }
+
+  .two-columns { 
+    --col-width: calc(var(--content-col-count) / 2);
+  }
+
+  .three-columns { 
+    --col-width: calc(var(--content-col-count) / 3);
+  }
+
+  .four-columns { 
+    --col-width: calc(var(--content-col-count) / 4);
+  }
+
+  .one-third {
+    --col-width: 4;
+  }
+
+  .two-thirds {
+    --col-width: 8;
+  }
+
+  .one-fourth {
+    --col-width: 3;
+  }
+
+  .three-fourths {
+    --col-width: 9;
+  }
+
+  .inherit-grid { /* Not needed for direct children of .grid, but useful for getting other intemediary elements between root grid and descendants to participate in the main grid */
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+  }
+}

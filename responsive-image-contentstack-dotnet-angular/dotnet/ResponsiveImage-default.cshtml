@@ -1,0 +1,138 @@
+// /dotnet/Website/Website/Components/ResponsiveImage/default.cshtml
+@using Website.Components.ResponsiveImage
+@using Website.Core.ContentStack
+
+@model ResponsiveImageViewModel
+
+@{
+    /* Test aspectRatio */
+    /* Possible values = "Intrinsic", "16:9", "4:3", "1:1", "4:5", "9:16" */
+    // Model?.aspectRatio = "1:1";
+
+    /* Test smart */
+    /* Possible values = true, false */
+    // Model?.isSmart = true;
+
+    /* Test base image dimensions */
+    // if (Model.image != null)
+    // {
+    //     Model.image.dimension = new Dimension { Width = 1200, Height = 630 };
+    // }
+
+    /* Test overrides */
+    // Model?.overrides = [];
+
+    /*
+    Model?.overrides = new List<ImageOverrideContainerViewModel>
+        {
+            new ImageOverrideContainerViewModel
+            {
+                overrideImageBlock = new ImageOverrideViewModel
+                {
+                    targetScreen = "Tablet",
+                    aspectRatio = "Intrinsic", // Possible values = "Intrinsic", "16:9", "4:3", "1:1", "4:5", "9:16"
+                    image = new CSFile
+                    {
+                        url = "https://placehold.co/3520x400.jpg",
+                        title = "Tablet Override Img",
+                        description = "Tablet Override Img",
+                        dimension = new Dimension { Width = 400, Height = 400 },
+                        publish_details = new PublishDetails
+                        {
+                            environment = "development",
+                            locale = "en-us"
+                        }
+                    }
+                }
+            },
+
+            new ImageOverrideContainerViewModel
+
+            {
+                overrideImageBlock = new ImageOverrideViewModel
+                {
+                    targetScreen = "Desktop",
+                    aspectRatio = "1:1", // Possible values = "Intrinsic", "16:9", "4:3", "1:1", "4:5", "9:16"
+                    image = new CSFile
+                    {
+                        url = "https://placehold.co/3520x400.jpg",
+                        title = "Tablet Override Img",
+                        description = "Tablet Override Img",
+                        dimension = new Dimension { Width = 600, Height = 400 },
+                        publish_details = new PublishDetails
+                        {
+                            environment = "development",
+                            locale = "en-us"
+                        }
+                    }
+                }
+            }
+        };
+    */
+}
+
+@{
+    string loadingValue = (Model?.isEagerLoad ?? false) ? "eager" : "lazy";
+    string fetchpriorityValue = (Model?.isEagerLoad ?? false) ? "high" : "auto";
+
+    var desktopOverrideSrcset = Model?.GetSrcSetForOverride("Desktop");
+    var tabletOverrideSrcset = Model?.GetSrcSetForOverride("Tablet");
+
+    var baseRatio = Model?.GetCssAspectRatio(); // default (base)
+    var tabletRatio = Model?.GetCssAspectRatio("Tablet"); // tablet override
+    var desktopRatio = Model?.GetCssAspectRatio("Desktop"); // desktop override
+
+    var baseWidth = Model?.GetIntrinsicWidth(); // default (base)
+    var tabletWidth = Model?.GetIntrinsicWidth("Tablet"); // tablet override
+    var desktopWidth = Model?.GetIntrinsicWidth("Desktop"); // desktop override
+}
+
+<div class="artDirectedImg">
+    @if (!string.IsNullOrEmpty(Model?.link?.url))
+    {
+        @Html.Raw($"<a href=\"{Model?.link?.url}\">")
+    }
+    @if (!string.IsNullOrEmpty(Model?.caption))
+    {
+        @Html.Raw("<figure>")
+    }
+    <picture>
+        @if (desktopOverrideSrcset != null)
+        {
+            <source media="(min-width: 1024px)" srcset="@desktopOverrideSrcset" sizes="@Model?.GetSizes()" />
+        }
+        @if (tabletOverrideSrcset != null)
+        {
+            <source media="(min-width: 768px)" srcset="@tabletOverrideSrcset" sizes="@Model?.GetSizes()" />
+        }
+        <img
+            class="artDirectedImg__image"
+            src="@Model?.GetDefaultSrc()"
+            srcset="@Model?.GetSrcSetForBase()"
+            sizes="@Model?.GetSizes()"
+            alt="@Model?.image?.description"
+            loading="@loadingValue"
+            fetchpriority="@fetchpriorityValue"
+            decoding="async"
+            style="
+                --ratio-base: @baseRatio;
+                --ratio-tablet: @tabletRatio;
+                --ratio-desktop: @desktopRatio;
+                --img-width-base: @baseWidth;
+                --img-width-tablet: @tabletWidth;
+                --img-width-desktop: @desktopWidth;
+                "
+        />
+    </picture>
+    @if (!string.IsNullOrEmpty(Model?.caption))
+    {
+        <figcaption class="responsive-figcaption">
+            @Html.Raw(Model.caption)
+        </figcaption>
+        @Html.Raw("</figure>")
+    }
+    @if (!string.IsNullOrEmpty(Model?.link?.url))
+    {
+        @Html.Raw("</a>")
+    }
+</div>

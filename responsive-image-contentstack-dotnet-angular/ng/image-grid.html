@@ -1,0 +1,63 @@
+// /apps/web-components/src/components/gallery/image-grid/image-grid.html
+
+@if (images$ | async; as images) { @if (images.length > 0) {
+<div
+  #gridContainer
+  class="galleryGrid__main"
+>
+  @for(column of columns$ | async; track $index) {
+  <ul class="galleryGrid__column">
+    @for(item of column; track item.id) {
+    <li class="galleryGrid__columnItem">
+      <button
+        class="galleryGrid__card foobar"
+        [style.aspect-ratio]="item.aspectRatio"
+        (click)="openLightbox(item.originalIndex, images)"
+        [attr.aria-label]="'View ' + item.name"
+      >
+        <img
+          imageHelper
+          class="galleryGrid__img"
+          [aspectRatio]="item.aspectRatio"
+          [ngSrc]="item.imageUrl"
+          [alt]="item.name"
+          [width]="item.width || 640"
+          [height]="item.height || 427"
+          sizes="(min-width: 1760px) 587px, (min-width: 901px) 33vw, 50vw"
+        />
+      </button>
+    </li>
+    }
+  </ul>
+  }
+</div>
+} @else if ((showSpinner$ | async) === false) {
+<div class="galleryGrid__scrollStatus">
+  <span class="galleryGrid__endMessage"
+    >No images found matching your criteria.</span
+  >
+</div>
+} } @if (showSpinner$ | async) {
+<div class="galleryGrid__scrollStatus">
+  <span class="galleryGrid__spinner"></span>
+</div>
+} @if ((isComplete$ | async) && (images$ | async)?.length) {
+<div class="galleryGrid__scrollStatus">
+  <span class="galleryGrid__endMessage">All images loaded</span>
+</div>
+}
+
+<div
+  #scrollSentinel
+  class="galleryGrid__scrollSentinel"
+></div>
+
+<lib-lightbox
+  [(visible)]="lightboxVisible"
+  [images]="lightboxImages()"
+  [initialIndex]="lightboxStartIndex()"
+  [minZoom]="0.5"
+  [maxZoom]="3"
+  [zoomStep]="0.25"
+  (filterSelected)="onFilterSelected($event)"
+/>
